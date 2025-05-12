@@ -1,0 +1,2 @@
+debug:
+	odin run . --debug
