@@ -2,13 +2,14 @@ package audio
 
 import "core:math"
 
-calculate_rms :: proc(buffer: [ANALYSIS_BUFFERS]f32) -> f32 {
+calculate_rms :: proc(buffer: []f32) -> f32 {
+	N := len(buffer)
 	sum: f32 = 0
-	for i in 0 ..< ANALYSIS_BUFFERS / 2 {
-		sum = sum + buffer[2 * i] * buffer[2 * i] + buffer[2 * i + 1] * buffer[2 * i + 1]
+	for i in 0 ..< N {
+		sum = sum + buffer[i] * buffer[i]
 	}
 
-	return math.sqrt_f32(sum / ANALYSIS_BUFFERS)
+	return math.sqrt_f32(sum / f32(N))
 }
 
 fft :: proc(x: []f32) -> []complex64 {

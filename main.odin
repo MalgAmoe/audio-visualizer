@@ -54,7 +54,7 @@ main :: proc() {
 
 
 	// set test signal frequency
-	data.sine_osc.freq = 100
+	data.sine_osc.freq = 300
 
 	// setup audio
 	audio.init_stream(&data)
@@ -88,10 +88,10 @@ main :: proc() {
 			rl.DrawLineEx({x1, y1}, {x2, y2}, 1, rl.RAYWHITE)
 		}
 
-		bins := f32(len(data.spectrum))
-		spacing := (f32(audio.SAMPLE_RATE) * 0.5) / bins
+		bins := len(data.spectrum)
+		spacing := (f32(audio.SAMPLE_RATE) * 0.5) / f32(bins)
 
-		for i in 0 ..< len(data.spectrum) - 1 {
+		for i in 0 ..< bins - 1 {
 			// Calculate frequency of this bin and next bin
 			freq1 := f32(i) * spacing
 			freq2 := f32(i + 1) * spacing

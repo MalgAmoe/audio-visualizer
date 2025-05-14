@@ -12,11 +12,11 @@ import "core:time"
 import ma "vendor:miniaudio"
 
 SAMPLE_RATE: c.uint = 44100
-OUTPUT_NUM_CHANNELS :: 1
+OUTPUT_NUM_CHANNELS :: 2
 BUFFER_SIZE :: 512
-ANALYSIS_BUFFERS :: 4 * OUTPUT_NUM_CHANNELS * BUFFER_SIZE
+ANALYSIS_BUFFERS :: 8 * OUTPUT_NUM_CHANNELS * BUFFER_SIZE
 
-window := hann_window(ANALYSIS_BUFFERS)
+window := hann_window(ANALYSIS_BUFFERS / 2)
 
 Data :: struct {
 	// test oscillator
@@ -30,6 +30,7 @@ Data :: struct {
 	rms:         f32,
 	spectrum:    []f32,
 	buffer:      [ANALYSIS_BUFFERS]f32,
+	mono_buffer: [ANALYSIS_BUFFERS / 2]f32,
 }
 
 Ring :: struct {
@@ -50,8 +51,8 @@ audio_callback :: proc "c" (device: ^ma.device, output: rawptr, _input: rawptr, 
 		sin_value := SineOsc_nextValue_linear(&a.sine_osc)
 
 		sample := 0.25 * sin_value
-		device_buffer[i] =  /* * 2 */sample
-		// device_buffer[i * 2 + 1] = sample
+		device_buffer[i * 2] = sample
+		device_buffer[i * 2 + 1] = sample
 	}
 
 	ring_write(&a.shared_ring, device_buffer[:])
@@ -79,16 +80,23 @@ ring_read :: proc(ring: ^Ring, all_buffer: []f32) {
 	ring.samples_added = false
 }
 
+get_mono_analysis_buffer :: proc(buffer: []f32, mono_buffer: []f32) {
+	for &sample, i in mono_buffer {
+		sample = (buffer[2 * i] + buffer[2 * i + 1]) * 0.5
+	}
+}
+
 analyse_audio :: proc(app_raw: rawptr) {
 	app := (^Data)(app_raw)
 
 	for {
 		if (app.shared_ring.samples_added) {
 			ring_read(&app.shared_ring, app.buffer[:])
+			get_mono_analysis_buffer(app.buffer[:], app.mono_buffer[:])
 
-			app.rms = calculate_rms(app.buffer)
+			app.rms = calculate_rms(app.mono_buffer[:])
 
-			windowed_buffer := app.buffer * window
+			windowed_buffer := app.mono_buffer * window
 			fft_value := fft(windowed_buffer[:])
 			app.spectrum = compute_spectrum(fft_value)
 		}
