@@ -6,7 +6,7 @@ import "core:math"
 
 // ----- SIMPLE SINE WAVE -----
 
-SINE_WAVETABLE_SIZE: int : 128
+SINE_WAVETABLE_SIZE: int : 4096
 
 create_sine_wavetable :: proc() -> [SINE_WAVETABLE_SIZE]f32 {
 	wavetable: [SINE_WAVETABLE_SIZE]f32

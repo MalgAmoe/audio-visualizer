@@ -12,9 +12,11 @@ import "core:time"
 import ma "vendor:miniaudio"
 
 SAMPLE_RATE: c.uint = 44100
-OUTPUT_NUM_CHANNELS :: 2
+OUTPUT_NUM_CHANNELS :: 1
 BUFFER_SIZE :: 512
 ANALYSIS_BUFFERS :: 4 * OUTPUT_NUM_CHANNELS * BUFFER_SIZE
+
+window := hann_window(ANALYSIS_BUFFERS)
 
 Data :: struct {
 	// test oscillator
@@ -37,7 +39,7 @@ Ring :: struct {
 	mutex:         sync.Mutex,
 }
 
-audio_callback :: proc "c" (device: ^ma.device, output: rawptr, rawptr, frame_count: u32) {
+audio_callback :: proc "c" (device: ^ma.device, output: rawptr, _input: rawptr, frame_count: u32) {
 	context = runtime.default_context()
 	a := (^Data)(device.pUserData)
 
@@ -47,9 +49,9 @@ audio_callback :: proc "c" (device: ^ma.device, output: rawptr, rawptr, frame_co
 	for i in 0 ..< frame_count {
 		sin_value := SineOsc_nextValue_linear(&a.sine_osc)
 
-		sample := 0.5 * sin_value
-		device_buffer[i * 2] = sample
-		device_buffer[i * 2 + 1] = sample
+		sample := 0.25 * sin_value
+		device_buffer[i] =  /* * 2 */sample
+		// device_buffer[i * 2 + 1] = sample
 	}
 
 	ring_write(&a.shared_ring, device_buffer[:])
@@ -86,7 +88,8 @@ analyse_audio :: proc(app_raw: rawptr) {
 
 			app.rms = calculate_rms(app.buffer)
 
-			fft_value := fft(app.buffer[:])
+			windowed_buffer := app.buffer * window
+			fft_value := fft(windowed_buffer[:])
 			app.spectrum = compute_spectrum(fft_value)
 		}
 

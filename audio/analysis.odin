@@ -68,20 +68,30 @@ bit_reverse :: proc(value: int, bits: int) -> int {
 }
 
 compute_spectrum :: proc(fft_out: []complex64) -> []f32 {
-	half_N := len(fft_out) / 2
-	spectrum: []f32 = make([]f32, half_N)
+	N := len(fft_out) / 2
+	spectrum: []f32 = make([]f32, N)
 
-	for i in 0 ..< half_N {
+	for i in 0 ..< N {
 		re := real(fft_out[i])
 		im := imag(fft_out[i])
-		magnitude := math.max(math.sqrt(re * re + im * im) / f32(half_N), 1e-10)
+		magnitude := math.max(math.sqrt(re * re + im * im) / f32(N), 1e-20)
 		spectrum[i] = math.log10(magnitude)
 	}
 
 	return spectrum
 }
 
-calc_position :: proc(i: f32) -> f32 {
-	if (i < 20) do return 0
-	return math.log10_f32(i / 20) / math.log10_f32(0.5 * f32(SAMPLE_RATE) / 20)
+hann_window :: proc($N: int) -> [N]f32 {
+	window: [N]f32
+	for i in 0 ..< N {
+		window[i] = 0.5 * (1.0 - math.cos(2.0 * math.PI * f32(i) / f32(N - 1)))
+	}
+	return window
+}
+
+calc_position :: proc(f: f32) -> f32 {
+	min_freq := f32(10) // Lowest frequency we need
+	max_freq := f32(20000) //  Highest frequency we need
+	if (f < 20) do return 0
+	return math.log10_f32(f / min_freq) / math.log10_f32(max_freq / min_freq)
 }

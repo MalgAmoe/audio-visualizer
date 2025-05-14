@@ -2,6 +2,7 @@ package main
 
 import "audio"
 import "core:fmt"
+import "core:math"
 import "core:mem"
 import "core:strings"
 import "core:thread"
@@ -48,22 +49,22 @@ main :: proc() {
 
 	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI, .MSAA_4X_HINT})
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "The Thing!")
+	rl.SetTargetFPS(60)
 	defer rl.CloseWindow()
 
 
 	// set test signal frequency
-	data.sine_osc.freq = 200
+	data.sine_osc.freq = 100
 
 	// setup audio
 	audio.init_stream(&data)
 	defer audio.quit(&data)
 
-	rl.SetTargetFPS(60)
 	rl.HideCursor()
 
 	width := f32(WINDOW_WIDTH)
 	height := f32(WINDOW_HEIGHT)
-	spacing := (f32(audio.SAMPLE_RATE) * 0.5) / f32(audio.ANALYSIS_BUFFERS / 4)
+
 
 	clicked := false
 
@@ -71,33 +72,57 @@ main :: proc() {
 		width = f32(rl.GetScreenWidth())
 		height = f32(rl.GetScreenHeight())
 		check_inputs(&data)
-		rms := data.rms
-		wave_samples := data.buffer
-		spectrum := data.spectrum
 
 		rl.BeginDrawing()
 
 		draw()
-		rl.DrawText(fmt.ctprintf("rms: %f", rms), 10, 10, 20, rl.RAYWHITE)
+		rl.DrawText(fmt.ctprintf("rms: %f", data.rms), 10, 10, 20, rl.RAYWHITE)
 
-		for i in 0 ..< len(wave_samples) / 2 - 1 {
+		for i in 0 ..< len(data.buffer) - 1 {
 			i_f := f32(i)
-			x1 := (i_f / audio.ANALYSIS_BUFFERS) * width
-			y1 := ((1.0 - wave_samples[i]) * (height * 0.5))
-			x2 := ((i_f + 1) / audio.ANALYSIS_BUFFERS) * width
-			y2 := ((1.0 - wave_samples[i + 1]) * (height * 0.5))
+			x1 := (i_f / audio.ANALYSIS_BUFFERS) * width * 0.5
+			y1 := ((1.0 - data.buffer[i]) * (height * 0.5))
+			x2 := ((i_f + 1) / audio.ANALYSIS_BUFFERS) * width * 0.5
+			y2 := ((1.0 - data.buffer[i + 1]) * (height * 0.5))
 
 			rl.DrawLineEx({x1, y1}, {x2, y2}, 1, rl.RAYWHITE)
 		}
 
-		for i in 0 ..< len(spectrum) - 1 {
-			i_f := f32(i)
-			bins := f32(len(spectrum))
+		bins := f32(len(data.spectrum))
+		spacing := (f32(audio.SAMPLE_RATE) * 0.5) / bins
 
-			x1 := (1 + (audio.calc_position(i_f * spacing))) * (width * 0.5)
-			y1 := ((1 - 0.065 * (spectrum[i] + 10))) * height
-			x2 := (1 + (audio.calc_position((i_f + 1) * spacing))) * (width * 0.5)
-			y2 := ((1 - 0.065 * (spectrum[i + 1] + 10))) * height
+		for i in 0 ..< len(data.spectrum) - 1 {
+			// Calculate frequency of this bin and next bin
+			freq1 := f32(i) * spacing
+			freq2 := f32(i + 1) * spacing
+
+			// Get normalized positions on log scale (0 to 1)
+			pos1 := audio.calc_position(freq1)
+			pos2 := audio.calc_position(freq2)
+
+			// Convert to screen coordinates (use full width)
+			x1 := (1 + pos1) * width * 0.5
+			x2 := (1 + pos2) * width * 0.5
+
+			// Normalize amplitude values - adjust these constants based on your actual spectrum values
+			amplitude_min := f32(-18) // dB
+			amplitude_max := f32(6) // dB
+
+			// Clamp spectrum values and normalize to 0-1
+			y_norm1 := math.clamp(
+				(data.spectrum[i] - amplitude_min) / (amplitude_max - amplitude_min),
+				0,
+				1,
+			)
+			y_norm2 := math.clamp(
+				(data.spectrum[i + 1] - amplitude_min) / (amplitude_max - amplitude_min),
+				0,
+				1,
+			)
+
+			// Convert to screen coordinates (0 at bottom, height at top)
+			y1 := (1 - y_norm1) * height
+			y2 := (1 - y_norm2) * height
 
 			rl.DrawLine(i32(x1), i32(y1), i32(x2), i32(y2), rl.RAYWHITE)
 		}
