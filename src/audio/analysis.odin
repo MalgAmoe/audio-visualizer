@@ -86,11 +86,13 @@ spectral_centroid :: proc(magnitude_bins: []f32) -> f32 {
 	f_times_mag: f32 = 0
 	total_mag: f32 = 0
 
-	bin_width := f32(SAMPLE_RATE) / f32(2 * len(magnitude_bins))
+	bin_width := f32(SAMPLE_RATE) / f32(len(magnitude_bins))
 
-	for magnitude, i in magnitude_bins {
+	for i in 0 ..< int(len(magnitude_bins) / 2) {
 		f_n := (f32(i) + 0.5) * bin_width
+		magnitude := magnitude_bins[i]
 		magnitude_linear := math.pow(10, magnitude / 20)
+
 		f_times_mag = f_times_mag + f_n * magnitude_linear
 		total_mag = total_mag + magnitude_linear
 	}
@@ -106,10 +108,11 @@ spectral_spread :: proc(magnitude_bins: []f32, centroid: f32) -> f32 {
 	sum_squared_deviation: f32 = 0
 	sum_amplitude: f32 = 0
 
-	bin_width := f32(SAMPLE_RATE) / f32(2 * len(magnitude_bins))
+	bin_width := f32(SAMPLE_RATE) / f32(len(magnitude_bins))
 
-	for magnitude, i in magnitude_bins {
+	for i in 0 ..< int(len(magnitude_bins) / 2) {
 		f_n := (f32(i) + 0.5) * bin_width
+		magnitude := magnitude_bins[i]
 		magnitude_linear := math.pow(10, magnitude / 20)
 
 		deviation := f_n - centroid
@@ -148,8 +151,8 @@ hann_window :: proc($N: int) -> [N]f32 {
 	return window
 }
 
-calc_position :: proc(f: f32) -> f32 {
-	min_freq := f32(10)
+linear_to_log_freq :: proc(f: f32) -> f32 {
+	min_freq := f32(20)
 	max_freq := f32(20000)
 	if (f < 20) do return 0
 	return math.log10_f32(f / min_freq) / math.log10_f32(max_freq / min_freq)
