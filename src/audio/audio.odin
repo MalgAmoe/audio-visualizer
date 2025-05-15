@@ -35,6 +35,7 @@ Data :: struct {
 	rms:               f32,
 	spectrum:          []f32,
 	spectral_centroid: f32,
+	spectral_spread:   f32,
 	buffer:            [ANALYSIS_BUFFERS]f32,
 	mono_buffer:       [ANALYSIS_BUFFERS / 2]f32,
 }
@@ -142,6 +143,7 @@ analyse_audio :: proc(app_raw: rawptr) {
 			fft_value := fft(windowed_buffer[:])
 			app.spectrum = compute_spectrum(fft_value)
 			app.spectral_centroid = spectral_centroid(app.spectrum)
+			app.spectral_spread = spectral_spread(app.spectrum, app.spectral_centroid)
 		}
 
 		time.accurate_sleep(10 * time.Millisecond)

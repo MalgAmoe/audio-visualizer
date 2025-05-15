@@ -76,7 +76,7 @@ compute_spectrum :: proc(fft_out: []complex64) -> []f32 {
 		re := real(fft_out[i])
 		im := imag(fft_out[i])
 		magnitude := math.max(math.sqrt(re * re + im * im) / f32(N), 1e-20)
-		spectrum[i] = math.log10(magnitude)
+		spectrum[i] = 20 * math.log10(magnitude)
 	}
 
 	return spectrum
@@ -90,7 +90,7 @@ spectral_centroid :: proc(magnitude_bins: []f32) -> f32 {
 
 	for magnitude, i in magnitude_bins {
 		f_n := (f32(i) + 0.5) * bin_width
-		magnitude_linear := math.pow(10, magnitude)
+		magnitude_linear := math.pow(10, magnitude / 20)
 		f_times_mag = f_times_mag + f_n * magnitude_linear
 		total_mag = total_mag + magnitude_linear
 	}
@@ -102,6 +102,28 @@ spectral_centroid :: proc(magnitude_bins: []f32) -> f32 {
 	return f_times_mag / total_mag
 }
 
+spectral_spread :: proc(magnitude_bins: []f32, centroid: f32) -> f32 {
+	sum_squared_deviation: f32 = 0
+	sum_amplitude: f32 = 0
+
+	bin_width := f32(SAMPLE_RATE) / f32(2 * len(magnitude_bins))
+
+	for magnitude, i in magnitude_bins {
+		f_n := (f32(i) + 0.5) * bin_width
+		magnitude_linear := math.pow(10, magnitude / 20)
+
+		deviation := f_n - centroid
+		sum_squared_deviation += deviation * deviation * magnitude_linear
+		sum_amplitude += magnitude_linear
+	}
+
+	if sum_amplitude < 0.0001 {
+		return 0
+	}
+
+	return math.sqrt(sum_squared_deviation / sum_amplitude)
+}
+
 hann_window :: proc($N: int) -> [N]f32 {
 	window: [N]f32
 	for i in 0 ..< N {
@@ -111,8 +133,8 @@ hann_window :: proc($N: int) -> [N]f32 {
 }
 
 calc_position :: proc(f: f32) -> f32 {
-	min_freq := f32(10) // Lowest frequency we need
-	max_freq := f32(20000) //  Highest frequency we need
+	min_freq := f32(10)
+	max_freq := f32(20000)
 	if (f < 20) do return 0
 	return math.log10_f32(f / min_freq) / math.log10_f32(max_freq / min_freq)
 }

@@ -98,8 +98,12 @@ main :: proc() {
 
 		draw()
 		rl.DrawText(fmt.ctprintf("rms: %f", data.rms), 10, 10, 20, rl.RAYWHITE)
-		central_spectroid_str := fmt.ctprintf("central_spectroid: %f", data.spectral_centroid)
-		rl.DrawText(central_spectroid_str, i32(width) - 300 - 5, 10, 20, rl.RAYWHITE)
+
+		central_spectroid_str := fmt.ctprintf("central spectroid: %d", int(data.spectral_centroid))
+		rl.DrawText(central_spectroid_str, i32(width) - 250 - 5, 10, 20, rl.ORANGE)
+
+		spectral_spread_str := fmt.ctprintf("spectral spread: %d", int(data.spectral_spread))
+		rl.DrawText(spectral_spread_str, i32(width) - 250 - 5, 35, 20, rl.YELLOW)
 
 		for i in 0 ..< len(data.buffer) - 1 {
 			i_f := f32(i)
@@ -128,8 +132,8 @@ main :: proc() {
 			x2 := (1 + pos2) * width * 0.5
 
 			// Normalize amplitude values - adjust these constants based on your actual spectrum values
-			amplitude_min := f32(-12) // dB
-			amplitude_max := f32(3) // dB
+			amplitude_min := f32(-120) // dB
+			amplitude_max := f32(0) // dB
 
 			// Clamp spectrum values and normalize to 0-1
 			y_norm1 := math.clamp(
@@ -151,15 +155,12 @@ main :: proc() {
 		}
 
 		x_spectral_centroid := (1 + audio.calc_position(data.spectral_centroid)) * width * 0.5
-		y1 := (1 - 0.25) * height * 0.5
-		y2 := (1 - 0.5) * height * 0.5
-		rl.DrawLine(
-			i32(x_spectral_centroid),
-			i32(y1),
-			i32(x_spectral_centroid),
-			i32(y2),
-			rl.RAYWHITE,
-		)
+		y1 := height * 0.5
+		y2 := (1 - 0.25) * height * 0.5
+		rl.DrawLineEx({x_spectral_centroid, y1}, {x_spectral_centroid, y2}, 2, rl.ORANGE)
+
+		x_spectral_spread := (1 + audio.calc_position(data.spectral_spread)) * width * 0.5
+		rl.DrawLineEx({x_spectral_spread, y1}, {x_spectral_spread, y2}, 2, rl.YELLOW)
 
 		rl.EndDrawing()
 	}
