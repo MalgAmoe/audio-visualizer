@@ -98,6 +98,8 @@ main :: proc() {
 
 		draw()
 		rl.DrawText(fmt.ctprintf("rms: %f", data.rms), 10, 10, 20, rl.RAYWHITE)
+		central_spectroid_str := fmt.ctprintf("central_spectroid: %f", data.spectral_centroid)
+		rl.DrawText(central_spectroid_str, i32(width) - 300 - 5, 10, 20, rl.RAYWHITE)
 
 		for i in 0 ..< len(data.buffer) - 1 {
 			i_f := f32(i)
@@ -147,6 +149,17 @@ main :: proc() {
 
 			rl.DrawLine(i32(x1), i32(y1), i32(x2), i32(y2), rl.RAYWHITE)
 		}
+
+		x_spectral_centroid := (1 + audio.calc_position(data.spectral_centroid)) * width * 0.5
+		y1 := (1 - 0.25) * height * 0.5
+		y2 := (1 - 0.5) * height * 0.5
+		rl.DrawLine(
+			i32(x_spectral_centroid),
+			i32(y1),
+			i32(x_spectral_centroid),
+			i32(y2),
+			rl.RAYWHITE,
+		)
 
 		rl.EndDrawing()
 	}

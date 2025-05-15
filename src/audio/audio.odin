@@ -20,22 +20,23 @@ window := hann_window(ANALYSIS_BUFFERS / 2)
 
 Data :: struct {
 	// test oscillator
-	sine_osc:    SineOsc,
+	sine_osc:          SineOsc,
 
 	// miniaudio
-	device:      ma.device,
+	device:            ma.device,
 
 	// WAV file playback
-	decoder:     ma.decoder,
-	wav_loaded:  bool,
-	is_playing:  bool,
+	decoder:           ma.decoder,
+	wav_loaded:        bool,
+	is_playing:        bool,
 
 	// audio analysis
-	shared_ring: Ring,
-	rms:         f32,
-	spectrum:    []f32,
-	buffer:      [ANALYSIS_BUFFERS]f32,
-	mono_buffer: [ANALYSIS_BUFFERS / 2]f32,
+	shared_ring:       Ring,
+	rms:               f32,
+	spectrum:          []f32,
+	spectral_centroid: f32,
+	buffer:            [ANALYSIS_BUFFERS]f32,
+	mono_buffer:       [ANALYSIS_BUFFERS / 2]f32,
 }
 
 Ring :: struct {
@@ -140,6 +141,7 @@ analyse_audio :: proc(app_raw: rawptr) {
 			windowed_buffer := app.mono_buffer * window
 			fft_value := fft(windowed_buffer[:])
 			app.spectrum = compute_spectrum(fft_value)
+			app.spectral_centroid = spectral_centroid(app.spectrum)
 		}
 
 		time.accurate_sleep(10 * time.Millisecond)

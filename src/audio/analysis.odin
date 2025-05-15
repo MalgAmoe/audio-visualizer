@@ -82,6 +82,26 @@ compute_spectrum :: proc(fft_out: []complex64) -> []f32 {
 	return spectrum
 }
 
+spectral_centroid :: proc(magnitude_bins: []f32) -> f32 {
+	f_times_mag: f32 = 0
+	total_mag: f32 = 0
+
+	bin_width := f32(SAMPLE_RATE) / f32(2 * len(magnitude_bins))
+
+	for magnitude, i in magnitude_bins {
+		f_n := (f32(i) + 0.5) * bin_width
+		magnitude_linear := math.pow(10, magnitude)
+		f_times_mag = f_times_mag + f_n * magnitude_linear
+		total_mag = total_mag + magnitude_linear
+	}
+
+	if total_mag < 0.0001 {
+		return 0
+	}
+
+	return f_times_mag / total_mag
+}
+
 hann_window :: proc($N: int) -> [N]f32 {
 	window: [N]f32
 	for i in 0 ..< N {
