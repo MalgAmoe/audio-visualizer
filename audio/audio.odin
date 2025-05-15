@@ -25,6 +25,11 @@ Data :: struct {
 	// miniaudio
 	device:      ma.device,
 
+	// WAV file playback
+	decoder:     ma.decoder,
+	wav_loaded:  bool,
+	is_playing:  bool,
+
 	// audio analysis
 	shared_ring: Ring,
 	rms:         f32,
@@ -47,13 +52,49 @@ audio_callback :: proc "c" (device: ^ma.device, output: rawptr, _input: rawptr, 
 	buffer_size := int(frame_count * OUTPUT_NUM_CHANNELS)
 	device_buffer := mem.slice_ptr((^f32)(output), buffer_size)
 
-	for i in 0 ..< frame_count {
-		sin_value := SineOsc_nextValue_linear(&a.sine_osc)
+	if a.wav_loaded && a.is_playing {
+		// Create a temporary buffer for decoded PCM frames
+		temp_buffer: [BUFFER_SIZE * OUTPUT_NUM_CHANNELS]f32
 
-		sample := 0.25 * sin_value
-		device_buffer[i * 2] = sample
-		device_buffer[i * 2 + 1] = sample
+		// Read the frames
+		frames_read: u64
+		result := ma.decoder_read_pcm_frames(
+			&a.decoder,
+			&temp_buffer[0],
+			u64(frame_count),
+			&frames_read,
+		)
+
+		if frames_read > 0 {
+			// Copy frames to the output buffer
+			for i in 0 ..< int(frames_read * OUTPUT_NUM_CHANNELS) {
+				if i < buffer_size {
+					device_buffer[i] = temp_buffer[i]
+				}
+			}
+
+			// If we reached the end of the file and didn't fill the entire buffer
+			if frames_read < u64(frame_count) {
+				// Either stop playback or loop the file
+				if true { 	// Set to false if you don't want looping
+					ma.decoder_seek_to_pcm_frame(&a.decoder, 0) // Seek back to start for looping
+				} else {
+					a.is_playing = false
+				}
+			}
+		} else {
+			// No frames read, stop playback or restart
+			a.is_playing = false
+		}
 	}
+
+	// for i in 0 ..< frame_count {
+	// 	sin_value := SineOsc_nextValue_linear(&a.sine_osc)
+
+	// 	sample := 0.25 * sin_value
+	// 	device_buffer[i * 2] = sample
+	// 	device_buffer[i * 2 + 1] = sample
+	// }
 
 	ring_write(&a.shared_ring, device_buffer[:])
 }
@@ -120,6 +161,48 @@ init_stream :: proc(data: ^Data) {
 		fmt.println("Failed to start playback device.")
 		ma.device_uninit(&data.device)
 		return
+	}
+}
+
+load_wav_file :: proc(data: ^Data, filename: string) -> bool {
+	// Clean up any existing decoder
+	if data.wav_loaded {
+		ma.decoder_uninit(&data.decoder)
+		data.wav_loaded = false
+	}
+
+	// Initialize the decoder
+	config := ma.decoder_config_init(ma.format.f32, OUTPUT_NUM_CHANNELS, SAMPLE_RATE)
+
+	result := ma.decoder_init_file(fmt.ctprint(filename), &config, &data.decoder)
+	if result != .SUCCESS {
+		fmt.println("Failed to load WAV file:", filename)
+		return false
+	}
+
+	data.wav_loaded = true
+	return true
+}
+
+play_wav :: proc(data: ^Data) {
+	if data.wav_loaded {
+		// Reset to the beginning
+		ma.decoder_seek_to_pcm_frame(&data.decoder, 0)
+		data.is_playing = true
+	}
+}
+
+stop_wav :: proc(data: ^Data) {
+	data.is_playing = false
+}
+
+pause_wav :: proc(data: ^Data) {
+	data.is_playing = false
+}
+
+resume_wav :: proc(data: ^Data) {
+	if data.wav_loaded {
+		data.is_playing = true
 	}
 }
 

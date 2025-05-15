@@ -4,6 +4,7 @@ import "audio"
 import "core:fmt"
 import "core:math"
 import "core:mem"
+import "core:os"
 import "core:strings"
 import "core:thread"
 
@@ -47,6 +48,29 @@ main :: proc() {
 		}
 	}
 
+	// setup audio
+	audio.init_stream(&data)
+	defer audio.quit(&data)
+
+	// Check for command-line arguments
+	args := os.args[1:]
+
+	if len(args) == 1 {
+		if audio.load_wav_file(&data, args[0]) {
+			fmt.println("Successfully loaded WAV file")
+
+			audio.play_wav(&data)
+		} else {
+			fmt.println("Failed to load WAV file")
+			return
+		}
+	} else {
+		// No arguments provided
+		fmt.println("No WAV file specified.")
+		fmt.println("Usage: your_program [wav_filename]")
+		return
+	}
+
 	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI, .MSAA_4X_HINT})
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "The Thing!")
 	rl.SetTargetFPS(60)
@@ -56,9 +80,6 @@ main :: proc() {
 	// set test signal frequency
 	data.sine_osc.freq = 300
 
-	// setup audio
-	audio.init_stream(&data)
-	defer audio.quit(&data)
 
 	rl.HideCursor()
 
@@ -85,7 +106,7 @@ main :: proc() {
 			x2 := ((i_f + 1) / audio.ANALYSIS_BUFFERS) * width * 0.5
 			y2 := ((1.0 - data.buffer[i + 1]) * (height * 0.5))
 
-			rl.DrawLineEx({x1, y1}, {x2, y2}, 1, rl.RAYWHITE)
+			rl.DrawLineEx({x1, y1}, {x2, y2}, data.rms * 8, rl.RAYWHITE)
 		}
 
 		bins := len(data.spectrum)
@@ -105,8 +126,8 @@ main :: proc() {
 			x2 := (1 + pos2) * width * 0.5
 
 			// Normalize amplitude values - adjust these constants based on your actual spectrum values
-			amplitude_min := f32(-18) // dB
-			amplitude_max := f32(6) // dB
+			amplitude_min := f32(-12) // dB
+			amplitude_max := f32(3) // dB
 
 			// Clamp spectrum values and normalize to 0-1
 			y_norm1 := math.clamp(
@@ -121,8 +142,8 @@ main :: proc() {
 			)
 
 			// Convert to screen coordinates (0 at bottom, height at top)
-			y1 := (1 - y_norm1) * height
-			y2 := (1 - y_norm2) * height
+			y1 := (1 - y_norm1) * height * 0.5
+			y2 := (1 - y_norm2) * height * 0.5
 
 			rl.DrawLine(i32(x1), i32(y1), i32(x2), i32(y2), rl.RAYWHITE)
 		}
