@@ -13,7 +13,7 @@ import ma "vendor:miniaudio"
 
 SAMPLE_RATE: c.uint = 44100
 OUTPUT_NUM_CHANNELS :: 2
-BUFFER_SIZE :: 512
+BUFFER_SIZE :: 256
 ANALYSIS_BUFFERS :: 8 * OUTPUT_NUM_CHANNELS * BUFFER_SIZE
 
 window := hann_window(ANALYSIS_BUFFERS / 2)
@@ -34,8 +34,10 @@ Data :: struct {
 	shared_ring:       Ring,
 	rms:               f32,
 	spectrum:          []f32,
+	old_spectrum:      []f32,
 	spectral_centroid: f32,
 	spectral_spread:   f32,
+	spectral_flux:     f32,
 	buffer:            [ANALYSIS_BUFFERS]f32,
 	mono_buffer:       [ANALYSIS_BUFFERS / 2]f32,
 }
@@ -141,9 +143,13 @@ analyse_audio :: proc(app_raw: rawptr) {
 
 			windowed_buffer := app.mono_buffer * window
 			fft_value := fft(windowed_buffer[:])
-			app.spectrum = compute_spectrum(fft_value)
-			app.spectral_centroid = spectral_centroid(app.spectrum)
-			app.spectral_spread = spectral_spread(app.spectrum, app.spectral_centroid)
+			spectrum := compute_spectrum(fft_value)
+			app.old_spectrum = app.spectrum
+			app.spectrum = spectrum
+
+			app.spectral_centroid = spectral_centroid(spectrum)
+			app.spectral_spread = spectral_spread(spectrum, app.spectral_centroid)
+			app.spectral_flux = spectral_flux(spectrum, app.old_spectrum)
 		}
 
 		time.accurate_sleep(10 * time.Millisecond)

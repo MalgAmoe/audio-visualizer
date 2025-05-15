@@ -124,6 +124,22 @@ spectral_spread :: proc(magnitude_bins: []f32, centroid: f32) -> f32 {
 	return math.sqrt(sum_squared_deviation / sum_amplitude)
 }
 
+spectral_flux :: proc(spectrum: []f32, old_spectrum: []f32) -> f32 {
+	sum_square_differences: f32 = 0
+
+	if (len(old_spectrum) < len(spectrum)) {
+		return 0
+	}
+
+	for i in 0 ..< len(spectrum) {
+		difference := spectrum[i] - old_spectrum[i]
+		rectified_difference := math.max(0, difference)
+		sum_square_differences += rectified_difference * rectified_difference
+	}
+
+	return math.sqrt(sum_square_differences)
+}
+
 hann_window :: proc($N: int) -> [N]f32 {
 	window: [N]f32
 	for i in 0 ..< N {

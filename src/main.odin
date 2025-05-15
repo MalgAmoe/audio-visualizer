@@ -99,11 +99,14 @@ main :: proc() {
 		draw()
 		rl.DrawText(fmt.ctprintf("rms: %f", data.rms), 10, 10, 20, rl.RAYWHITE)
 
-		central_spectroid_str := fmt.ctprintf("central spectroid: %d", int(data.spectral_centroid))
+		central_spectroid_str := fmt.ctprintf("spectral centroid: %d", int(data.spectral_centroid))
 		rl.DrawText(central_spectroid_str, i32(width) - 250 - 5, 10, 20, rl.ORANGE)
 
 		spectral_spread_str := fmt.ctprintf("spectral spread: %d", int(data.spectral_spread))
 		rl.DrawText(spectral_spread_str, i32(width) - 250 - 5, 35, 20, rl.YELLOW)
+
+		spectral_flux_str := fmt.ctprintf("spectral flux: %d", int(data.spectral_flux))
+		rl.DrawText(spectral_flux_str, i32(width) - 250 - 5, 60, 20, rl.PURPLE)
 
 		for i in 0 ..< len(data.buffer) - 1 {
 			i_f := f32(i)
@@ -161,6 +164,11 @@ main :: proc() {
 
 		x_spectral_spread := (1 + audio.calc_position(data.spectral_spread)) * width * 0.5
 		rl.DrawLineEx({x_spectral_spread, y1}, {x_spectral_spread, y2}, 2, rl.YELLOW)
+
+		y_spectral_flux := height * 0.5 - data.spectral_flux * 0.25
+		x1 := width * 0.5
+		x2 := (1 + 0.25) * width * 0.5
+		rl.DrawLineEx({x1, y_spectral_flux}, {x2, y_spectral_flux}, 2, rl.PURPLE)
 
 		rl.EndDrawing()
 	}
