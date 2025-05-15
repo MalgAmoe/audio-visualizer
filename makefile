@@ -1,2 +1,2 @@
 debug:
-	odin run . --debug -- test1.wav
+	odin run src/. --debug -- test1.wav
