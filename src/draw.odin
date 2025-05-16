@@ -23,11 +23,11 @@ draw_waveform_info :: proc(data: ^audio.Data, width: f32, height: f32) {
 	for i in 0 ..< len(data.buffer) - 1 {
 		i_f := f32(i)
 		x1 := (i_f / audio.ANALYSIS_BUFFERS) * width * 0.5
-		y1 := ((1.0 - data.buffer[i]) * (height * 0.5))
+		y1 := ((1.0 - data.buffer[i]) * (height * 0.25)) + 20
 		x2 := ((i_f + 1) / audio.ANALYSIS_BUFFERS) * width * 0.5
-		y2 := ((1.0 - data.buffer[i + 1]) * (height * 0.5))
+		y2 := ((1.0 - data.buffer[i + 1]) * (height * 0.25)) + 20
 
-		rl.DrawLineEx({x1, y1}, {x2, y2}, data.rms * 8, rl.RAYWHITE)
+		rl.DrawLineEx({x1, y1}, {x2, y2}, data.rms, rl.RAYWHITE)
 	}
 }
 

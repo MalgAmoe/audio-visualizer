@@ -11,7 +11,7 @@ import ma "vendor:miniaudio"
 SAMPLE_RATE: c.uint = 44100
 OUTPUT_NUM_CHANNELS :: 2
 BUFFER_SIZE :: 512
-ANALYSIS_BUFFERS :: 4 * OUTPUT_NUM_CHANNELS * BUFFER_SIZE
+ANALYSIS_BUFFERS :: 8 * OUTPUT_NUM_CHANNELS * BUFFER_SIZE
 
 window := hann_window(ANALYSIS_BUFFERS / 2)
 
@@ -38,13 +38,13 @@ Data :: struct {
 	// audio analysis
 	shared_ring:        Ring,
 	rms:                f32,
-	spectrum:           []f32,
-	old_spectrum:       []f32,
+	spectrum:           [ANALYSIS_BUFFERS / 2]f32,
+	old_spectrum:       [ANALYSIS_BUFFERS / 2]f32,
 	spectral_centroid:  f32,
 	spectral_spread:    f32,
 	spectral_flux:      f32,
 	stereo_correlation: f32,
-	spectral_phases:    []Phase,
+	spectral_phases:    [ANALYSIS_BUFFERS / 4]Phase,
 	buffer:             [ANALYSIS_BUFFERS]f32,
 	mono_buffer:        [ANALYSIS_BUFFERS / 2]f32,
 }
@@ -142,7 +142,7 @@ analyse_audio :: proc(app: ^Data) {
 			app.stereo_correlation = stereo_correlation(app.buffer[:])
 
 			windowed_buffer := app.mono_buffer * window
-			fft_value := fft(windowed_buffer[:])
+			fft_value := fft(windowed_buffer)
 			spectrum := compute_spectrum(fft_value)
 			app.old_spectrum = app.spectrum
 			app.spectrum = spectrum
@@ -154,8 +154,8 @@ analyse_audio :: proc(app: ^Data) {
 			left_buffer, right_buffer := get_buffer_left_and_right(app.buffer)
 			left_windowed_buffer := left_buffer * window
 			right_windowed_buffer := right_buffer * window
-			left_fft := fft(left_windowed_buffer[:])
-			right_fft := fft(right_windowed_buffer[:])
+			left_fft := fft(left_windowed_buffer)
+			right_fft := fft(right_windowed_buffer)
 			app.spectral_phases = spectral_phase(left_fft, right_fft)
 		}
 

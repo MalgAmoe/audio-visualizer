@@ -13,14 +13,14 @@ calculate_rms :: proc(buffer: []f32) -> f32 {
 	return math.sqrt_f32(sum / f32(N))
 }
 
-fft :: proc(x: []f32) -> []complex64 {
+fft :: proc(x: [ANALYSIS_BUFFERS / 2]f32) -> [ANALYSIS_BUFFERS / 2]complex64 {
 	N := len(x)
 	steps := int(math.log2(f16(N)))
 
 	assert(((N & (N - 1)) == 0), "In put size must be power of 2")
 
 	// convert to complex
-	X: []complex64 = make([]complex64, N)
+	X: [ANALYSIS_BUFFERS / 2]complex64
 	for i in 0 ..< N {
 		X[i] = complex(x[i], 0)
 	}
@@ -69,9 +69,9 @@ bit_reverse :: proc(value: int, bits: int) -> int {
 	return result
 }
 
-compute_spectrum :: proc(fft_out: []complex64) -> []f32 {
+compute_spectrum :: proc(fft_out: [ANALYSIS_BUFFERS / 2]complex64) -> [ANALYSIS_BUFFERS / 2]f32 {
 	N := len(fft_out) / 2
-	spectrum: []f32 = make([]f32, N)
+	spectrum: [ANALYSIS_BUFFERS / 2]f32
 
 	for i in 0 ..< N {
 		re := real(fft_out[i])
@@ -83,7 +83,7 @@ compute_spectrum :: proc(fft_out: []complex64) -> []f32 {
 	return spectrum
 }
 
-spectral_centroid :: proc(magnitude_bins: []f32) -> f32 {
+spectral_centroid :: proc(magnitude_bins: [ANALYSIS_BUFFERS / 2]f32) -> f32 {
 	f_times_mag: f32 = 0
 	total_mag: f32 = 0
 
@@ -105,7 +105,7 @@ spectral_centroid :: proc(magnitude_bins: []f32) -> f32 {
 	return f_times_mag / total_mag
 }
 
-spectral_spread :: proc(magnitude_bins: []f32, centroid: f32) -> f32 {
+spectral_spread :: proc(magnitude_bins: [ANALYSIS_BUFFERS / 2]f32, centroid: f32) -> f32 {
 	sum_squared_deviation: f32 = 0
 	sum_amplitude: f32 = 0
 
@@ -128,7 +128,10 @@ spectral_spread :: proc(magnitude_bins: []f32, centroid: f32) -> f32 {
 	return math.sqrt(sum_squared_deviation / sum_amplitude)
 }
 
-spectral_flux :: proc(spectrum: []f32, old_spectrum: []f32) -> f32 {
+spectral_flux :: proc(
+	spectrum: [ANALYSIS_BUFFERS / 2]f32,
+	old_spectrum: [ANALYSIS_BUFFERS / 2]f32,
+) -> f32 {
 	sum_square_differences: f32 = 0
 
 	if (len(old_spectrum) < len(spectrum)) {
@@ -186,11 +189,13 @@ stereo_correlation :: proc(frame: []f32) -> f32 {
 	return math.clamp(correlation, -1, 1)
 }
 
-spectral_phase :: proc(left_fft: []complex64, right_fft: []complex64) -> []Phase {
-	N := len(left_fft) / 2
-	phases: []Phase = make([]Phase, N)
+spectral_phase :: proc(
+	left_fft: [ANALYSIS_BUFFERS / 2]complex64,
+	right_fft: [ANALYSIS_BUFFERS / 2]complex64,
+) -> [ANALYSIS_BUFFERS / 4]Phase {
+	phases: [ANALYSIS_BUFFERS / 4]Phase
 
-	for i in 0 ..< N {
+	for i in 0 ..< len(phases) {
 		left_im := imag(left_fft[i])
 		left_re := real(left_fft[i])
 		right_im := imag(right_fft[i])
