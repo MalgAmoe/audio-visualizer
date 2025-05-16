@@ -76,11 +76,6 @@ main :: proc() {
 	rl.SetTargetFPS(60)
 	defer rl.CloseWindow()
 
-
-	// set test signal frequency
-	data.sine_osc.freq = 300
-
-
 	rl.HideCursor()
 
 	width := f32(WINDOW_WIDTH)
@@ -169,6 +164,25 @@ main :: proc() {
 		x1 := width * 0.5
 		x2 := (1 + 0.25) * width * 0.5
 		rl.DrawLineEx({x1, y_spectral_flux}, {x2, y_spectral_flux}, 5, rl.PURPLE)
+
+
+		x_stereo_correlation := width * 0.75 + (width * 0.25 - 50) * data.stereo_correlation
+		y_stereo_correlation_1 := height - 10
+		y_stereo_correlation_2 := y_stereo_correlation_1 - 10
+		rl.DrawLineEx(
+			{width * 0.5 + 50, y_stereo_correlation_1 - 5},
+			{width - 50, y_stereo_correlation_1 - 5},
+			10,
+			rl.Color{255, 255, 255, 50},
+		)
+		rl.DrawLineEx(
+			{x_stereo_correlation, y_stereo_correlation_1},
+			{x_stereo_correlation, y_stereo_correlation_2},
+			5,
+			rl.RAYWHITE,
+		)
+		rl.DrawText("-1", i32(width) / 2 + 30, i32(y_stereo_correlation_1 - 12), 15, rl.WHITE)
+		rl.DrawText("1", i32(width) - 40, i32(y_stereo_correlation_1 - 12), 15, rl.WHITE)
 
 		rl.EndDrawing()
 	}

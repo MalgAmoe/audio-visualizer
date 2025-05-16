@@ -143,6 +143,48 @@ spectral_flux :: proc(spectrum: []f32, old_spectrum: []f32) -> f32 {
 	return math.sqrt(sum_square_differences)
 }
 
+stereo_correlation :: proc(frame: []f32) -> f32 {
+	if len(frame) < 2 || len(frame) % 2 != 0 {
+		return 0
+	}
+
+	sum_l: f32 = 0
+	sum_r: f32 = 0
+	sum_lr: f32 = 0
+	sum_l_square: f32 = 0
+	sum_r_square: f32 = 0
+
+	len_frame := len(frame) / 2
+
+	for i in 0 ..< len_frame {
+		left := frame[2 * i]
+		right := frame[2 * i + 1]
+
+		sum_l += left
+		sum_r += right
+		sum_lr += left * right
+		sum_l_square += left * left
+		sum_r_square += right * right
+	}
+
+	n := f32(len_frame)
+	covariance := (sum_lr - (sum_l * sum_r) / n) / n
+	variance_l := (sum_l_square - (sum_l * sum_l) / n) / n
+	variance_r := (sum_r_square - (sum_r * sum_r) / n) / n
+
+	std_dev_l := math.sqrt(variance_l)
+	std_dev_r := math.sqrt(variance_r)
+
+	epsilon: f32 = 1e-8
+	if std_dev_l < epsilon || std_dev_r < epsilon {
+		return 0
+	}
+
+	correlation := covariance / (std_dev_l * std_dev_r)
+
+	return math.clamp(correlation, -1, 1)
+}
+
 hann_window :: proc($N: int) -> [N]f32 {
 	window: [N]f32
 	for i in 0 ..< N {
