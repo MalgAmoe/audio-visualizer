@@ -15,6 +15,11 @@ ANALYSIS_BUFFERS :: 4 * OUTPUT_NUM_CHANNELS * BUFFER_SIZE
 
 window := hann_window(ANALYSIS_BUFFERS / 2)
 
+Phase :: struct {
+	phase:     f32,
+	magnitude: f32,
+}
+
 Data :: struct {
 	// test oscillator
 	sine_osc:           SineOsc,
@@ -39,6 +44,7 @@ Data :: struct {
 	spectral_spread:    f32,
 	spectral_flux:      f32,
 	stereo_correlation: f32,
+	spectral_phases:    []Phase,
 	buffer:             [ANALYSIS_BUFFERS]f32,
 	mono_buffer:        [ANALYSIS_BUFFERS / 2]f32,
 }
@@ -144,6 +150,13 @@ analyse_audio :: proc(app: ^Data) {
 			app.spectral_centroid = spectral_centroid(spectrum)
 			app.spectral_spread = spectral_spread(spectrum, app.spectral_centroid)
 			app.spectral_flux = spectral_flux(spectrum, app.old_spectrum)
+
+			left_buffer, right_buffer := get_buffer_left_and_right(app.buffer)
+			left_windowed_buffer := left_buffer * window
+			right_windowed_buffer := right_buffer * window
+			left_fft := fft(left_windowed_buffer[:])
+			right_fft := fft(right_windowed_buffer[:])
+			app.spectral_phases = spectral_phase(left_fft, right_fft)
 		}
 
 		time.accurate_sleep(10 * time.Millisecond)

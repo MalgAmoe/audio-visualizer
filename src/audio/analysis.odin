@@ -1,5 +1,6 @@
 package audio
 
+import "core:fmt"
 import "core:math"
 
 calculate_rms :: proc(buffer: []f32) -> f32 {
@@ -185,6 +186,33 @@ stereo_correlation :: proc(frame: []f32) -> f32 {
 	return math.clamp(correlation, -1, 1)
 }
 
+spectral_phase :: proc(left_fft: []complex64, right_fft: []complex64) -> []Phase {
+	N := len(left_fft) / 2
+	phases: []Phase = make([]Phase, N)
+
+	for i in 0 ..< N {
+		left_im := imag(left_fft[i])
+		left_re := real(left_fft[i])
+		right_im := imag(right_fft[i])
+		right_re := real(right_fft[i])
+
+		left_mag := math.sqrt(left_re * left_re + left_im * left_im)
+		right_mag := math.sqrt(right_re * right_re + right_im * right_im)
+
+		left_phase := math.atan2(left_im, left_re)
+		right_phase := math.atan2(right_im, right_re)
+
+
+		phase_diff := right_phase - left_phase
+		phases[i] = Phase {
+			phase     = phase_diff / math.PI,
+			magnitude = math.log10(left_mag + right_mag),
+		}
+	}
+
+	return phases
+}
+
 hann_window :: proc($N: int) -> [N]f32 {
 	window: [N]f32
 	for i in 0 ..< N {
@@ -197,6 +225,25 @@ stereo_buffer_to_mono :: proc(buffer: []f32, mono_buffer: []f32) {
 	for &sample, i in mono_buffer {
 		sample = (buffer[2 * i] + buffer[2 * i + 1]) * 0.5
 	}
+}
+
+get_buffer_left_and_right :: proc(
+	buffer: [ANALYSIS_BUFFERS]f32,
+) -> (
+	l_buffer: [ANALYSIS_BUFFERS / 2]f32,
+	r_buffer: [ANALYSIS_BUFFERS / 2]f32,
+) {
+	if len(buffer) < 2 || len(buffer) % 2 != 0 {
+		return l_buffer, r_buffer
+	}
+	n := len(buffer) / 2
+
+	for i in 0 ..< n {
+		l_buffer[i] = buffer[2 * i]
+		r_buffer[i] = buffer[2 * i + 1]
+	}
+
+	return l_buffer, r_buffer
 }
 
 linear_to_log_freq :: proc(f: f32) -> f32 {

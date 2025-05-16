@@ -77,24 +77,36 @@ draw_spetrum_info :: proc(data: ^audio.Data, width: f32, height: f32) {
 		y1 := (1 - y_norm1) * height * 0.5
 		y2 := (1 - y_norm2) * height * 0.5
 
-		rl.DrawLine(i32(x1), i32(y1), i32(x2), i32(y2), rl.RAYWHITE)
+		rl.DrawLine(i32(x1), i32(y1), i32(x2), i32(y2), rl.SKYBLUE)
 	}
 
 	x_spectral_centroid := (1 + audio.linear_to_log_freq(data.spectral_centroid)) * width * 0.5
 	y1 := height * 0.5
-	y2 := (1 - 0.25) * height * 0.5
-	rl.DrawLineEx({x_spectral_centroid, y1}, {x_spectral_centroid, y2}, 5, rl.ORANGE)
+	y2 := (1 - 0.0625) * height * 0.5
+	rl.DrawLineEx({x_spectral_centroid, y1}, {x_spectral_centroid, y2}, 3, rl.ORANGE)
 
 	x_spectral_spread := (1 + audio.linear_to_log_freq(data.spectral_spread)) * width * 0.5
-	rl.DrawLineEx({x_spectral_spread, y1}, {x_spectral_spread, y2}, 5, rl.YELLOW)
+	rl.DrawLineEx({x_spectral_spread, y1}, {x_spectral_spread, y2}, 3, rl.YELLOW)
 
 	y_spectral_flux := height * 0.5 - data.spectral_flux * 0.25
 	x1 := width * 0.5
-	x2 := (1 + 0.25) * width * 0.5
-	rl.DrawLineEx({x1, y_spectral_flux}, {x2, y_spectral_flux}, 5, rl.PURPLE)
+	x2 := (1 + 0.0625) * width * 0.5
+	rl.DrawLineEx({x1, y_spectral_flux}, {x2, y_spectral_flux}, 3, rl.PURPLE)
 }
 
 draw_phase_info :: proc(data: ^audio.Data, width: f32, height: f32) {
+	bins := len(data.spectral_phases)
+	spacing := (f32(audio.SAMPLE_RATE)) / f32(bins)
+
+	for phase, i in data.spectral_phases {
+		freq := f32(i) * spacing
+		pos := audio.linear_to_log_freq(freq)
+		x := width * 0.75 + 0.125 * (width) * phase.phase
+		y := height - 40 - (height) * 0.4 * f32(pos)
+
+		rl.DrawCircleV({x, y}, 1.5 * phase.magnitude, rl.PINK)
+	}
+
 	x_stereo_correlation := width * 0.75 + (width * 0.25 - 50) * data.stereo_correlation
 	y_stereo_correlation_1 := height - 10
 	y_stereo_correlation_2 := y_stereo_correlation_1 - 10
@@ -102,14 +114,14 @@ draw_phase_info :: proc(data: ^audio.Data, width: f32, height: f32) {
 		{width * 0.5 + 50, y_stereo_correlation_1 - 5},
 		{width - 50, y_stereo_correlation_1 - 5},
 		10,
-		rl.Color{255, 255, 255, 50},
+		rl.Color{255, 255, 255, 20},
 	)
 	rl.DrawLineEx(
 		{x_stereo_correlation, y_stereo_correlation_1},
 		{x_stereo_correlation, y_stereo_correlation_2},
 		5,
-		rl.RAYWHITE,
+		rl.PINK,
 	)
-	rl.DrawText("-1", i32(width) / 2 + 30, i32(y_stereo_correlation_1 - 12), 15, rl.WHITE)
-	rl.DrawText("1", i32(width) - 40, i32(y_stereo_correlation_1 - 12), 15, rl.WHITE)
+	rl.DrawText("-1", i32(width) / 2 + 30, i32(y_stereo_correlation_1 - 12), 15, rl.PINK)
+	rl.DrawText("1", i32(width) - 40, i32(y_stereo_correlation_1 - 12), 15, rl.PINK)
 }
