@@ -210,8 +210,8 @@ spectral_phase :: proc(
 
 		phase_diff := right_phase - left_phase
 		phases[i] = Phase {
-			phase     = phase_diff / math.PI,
-			magnitude = math.log10(left_mag + right_mag),
+			phase     = phase_diff / (2 * math.PI),
+			magnitude = 20 * math.log10((left_mag + right_mag) * 0.5),
 		}
 	}
 

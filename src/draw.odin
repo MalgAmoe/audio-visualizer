@@ -101,10 +101,10 @@ draw_phase_info :: proc(data: ^audio.Data, width: f32, height: f32) {
 	for phase, i in data.spectral_phases {
 		freq := f32(i) * spacing
 		pos := audio.linear_to_log_freq(freq)
-		x := width * 0.75 + 0.125 * (width) * phase.phase
+		x := width * 0.75 + 0.25 * (width - 10) * phase.phase
 		y := height - 40 - (height) * 0.4 * f32(pos)
 
-		rl.DrawCircleV({x, y}, 1.5 * phase.magnitude, rl.PINK)
+		rl.DrawCircleV({x, y}, phase.magnitude * 0.1, rl.PINK)
 	}
 
 	x_stereo_correlation := width * 0.75 + (width * 0.25 - 50) * data.stereo_correlation
