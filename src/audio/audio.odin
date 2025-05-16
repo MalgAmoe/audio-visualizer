@@ -3,12 +3,9 @@ package audio
 import "base:runtime"
 import c "core:c/libc"
 import "core:fmt"
-import "core:math"
 import "core:mem"
-import "core:os"
 import "core:sync"
 import "core:time"
-
 import ma "vendor:miniaudio"
 
 SAMPLE_RATE: c.uint = 44100
@@ -24,6 +21,9 @@ Data :: struct {
 
 	// miniaudio
 	device:             ma.device,
+
+	// run analysis thread
+	run_analyis:        bool,
 
 	// WAV file playback
 	decoder:            ma.decoder,
@@ -126,13 +126,11 @@ ring_read :: proc(ring: ^Ring, all_buffer: []f32) {
 	ring.samples_added = false
 }
 
-analyse_audio :: proc(app_raw: rawptr) {
-	app := (^Data)(app_raw)
-
-	for {
+analyse_audio :: proc(app: ^Data) {
+	for app.run_analyis {
 		if (app.shared_ring.samples_added) {
 			ring_read(&app.shared_ring, app.buffer[:])
-			get_mono_analysis_buffer(app.buffer[:], app.mono_buffer[:])
+			stereo_buffer_to_mono(app.buffer[:], app.mono_buffer[:])
 
 			app.rms = calculate_rms(app.mono_buffer[:])
 			app.stereo_correlation = stereo_correlation(app.buffer[:])

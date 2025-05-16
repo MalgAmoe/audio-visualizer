@@ -1,8 +1,6 @@
 package audio
 
-import "core:fmt"
 import "core:math"
-
 
 // ----- SIMPLE SINE WAVE -----
 

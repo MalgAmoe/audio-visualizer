@@ -193,7 +193,7 @@ hann_window :: proc($N: int) -> [N]f32 {
 	return window
 }
 
-get_mono_analysis_buffer :: proc(buffer: []f32, mono_buffer: []f32) {
+stereo_buffer_to_mono :: proc(buffer: []f32, mono_buffer: []f32) {
 	for &sample, i in mono_buffer {
 		sample = (buffer[2 * i] + buffer[2 * i + 1]) * 0.5
 	}

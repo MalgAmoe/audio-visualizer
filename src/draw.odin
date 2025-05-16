@@ -1,11 +1,10 @@
 package main
 
-import "audio"
-
 import "core:fmt"
 import "core:math"
-
 import rl "vendor:raylib"
+
+import "audio"
 
 draw :: proc(data: ^audio.Data, width: f32, height: f32) {
 	rl.BeginDrawing()
