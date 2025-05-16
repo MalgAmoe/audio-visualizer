@@ -193,6 +193,12 @@ hann_window :: proc($N: int) -> [N]f32 {
 	return window
 }
 
+get_mono_analysis_buffer :: proc(buffer: []f32, mono_buffer: []f32) {
+	for &sample, i in mono_buffer {
+		sample = (buffer[2 * i] + buffer[2 * i + 1]) * 0.5
+	}
+}
+
 linear_to_log_freq :: proc(f: f32) -> f32 {
 	min_freq := f32(20)
 	max_freq := f32(20000)

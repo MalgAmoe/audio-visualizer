@@ -126,12 +126,6 @@ ring_read :: proc(ring: ^Ring, all_buffer: []f32) {
 	ring.samples_added = false
 }
 
-get_mono_analysis_buffer :: proc(buffer: []f32, mono_buffer: []f32) {
-	for &sample, i in mono_buffer {
-		sample = (buffer[2 * i] + buffer[2 * i + 1]) * 0.5
-	}
-}
-
 analyse_audio :: proc(app_raw: rawptr) {
 	app := (^Data)(app_raw)
 
@@ -176,6 +170,11 @@ init_stream :: proc(data: ^Data) {
 	}
 }
 
+quit :: proc(data: ^Data) {
+	ma.device_stop(&data.device)
+	ma.device_uninit(&data.device)
+}
+
 load_wav_file :: proc(data: ^Data, filename: string) -> bool {
 	// Clean up any existing decoder
 	if data.wav_loaded {
@@ -216,9 +215,4 @@ resume_wav :: proc(data: ^Data) {
 	if data.wav_loaded {
 		data.is_playing = true
 	}
-}
-
-quit :: proc(data: ^Data) {
-	ma.device_stop(&data.device)
-	ma.device_uninit(&data.device)
 }
