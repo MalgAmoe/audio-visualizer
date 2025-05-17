@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:mem"
+import vmem "core:mem/virtual"
 import "core:os"
 import "core:thread"
 import rl "vendor:raylib"
@@ -41,18 +42,19 @@ main :: proc() {
 		}
 	}
 
+	// set arena for audio data struct
+	memory_arena: vmem.Arena
+	arena_allocator := vmem.arena_allocator(&memory_arena)
+	defer vmem.arena_destroy(&memory_arena)
+
 	// create audio data
-	data := audio.Data {
-		sine_osc    = audio.SineOsc_create(120),
-		shared_ring = audio.Ring{},
-	}
+	data := new(audio.Data, arena_allocator)
 
 	// setup analysis thread
 	thread_handle := thread.create(analysis_thread)
-	thread_handle.data = rawptr(&data)
+	thread_handle.data = rawptr(data)
 	thread.start(thread_handle)
 	data.run_analyis = true
-	// close thread and delete data
 	defer {
 		data.run_analyis = false
 		thread.join(thread_handle)
@@ -60,16 +62,16 @@ main :: proc() {
 	}
 
 	// setup audio
-	audio.init_stream(&data)
-	defer audio.quit(&data)
+	audio.init_stream(data)
+	defer audio.quit(data)
 
 	// Check for command-line arguments
 	args := os.args[1:]
 	if len(args) == 1 {
-		if audio.load_wav_file(&data, args[0]) {
+		if audio.load_wav_file(data, args[0]) {
 			fmt.println("Successfully loaded WAV file")
 
-			audio.play_wav(&data)
+			audio.play_wav(data)
 		} else {
 			fmt.println("Failed to load WAV file")
 			return
@@ -96,7 +98,7 @@ main :: proc() {
 		width = f32(rl.GetScreenWidth())
 		height = f32(rl.GetScreenHeight())
 
-		check_inputs(&data)
-		draw(&data, width, height)
+		check_inputs(data)
+		draw(data, width, height)
 	}
 }
