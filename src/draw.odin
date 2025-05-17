@@ -20,14 +20,16 @@ draw :: proc(data: ^audio.Data, width: f32, height: f32) {
 draw_waveform_info :: proc(data: ^audio.Data, width: f32, height: f32) {
 	rl.DrawText(fmt.ctprintf("rms: %f", data.rms), 10, 10, 20, rl.RAYWHITE)
 
-	for i in 0 ..< len(data.buffer) - 1 {
-		i_f := f32(i)
-		x1 := (i_f / audio.ANALYSIS_BUFFERS) * width * 0.5
-		y1 := ((1.0 - data.buffer[i]) * (height * 0.25)) + 20
-		x2 := ((i_f + 1) / audio.ANALYSIS_BUFFERS) * width * 0.5
-		y2 := ((1.0 - data.buffer[i + 1]) * (height * 0.25)) + 20
+	len_buffer := len(data.mono_buffer)
 
-		rl.DrawLineEx({x1, y1}, {x2, y2}, data.rms, rl.RAYWHITE)
+	for i in 0 ..< len_buffer - 1 {
+		i_f := f32(i)
+		x1 := (i_f / f32(len_buffer)) * width * 0.5
+		y1 := ((1.0 - data.mono_buffer[i]) * (height * 0.25)) + 20
+		x2 := ((i_f + 1) / f32(len_buffer)) * width * 0.5
+		y2 := ((1.0 - data.mono_buffer[i + 1]) * (height * 0.25)) + 20
+
+		rl.DrawLineEx({x1, y1}, {x2, y2}, 10 * data.rms, rl.RAYWHITE)
 	}
 }
 
@@ -44,7 +46,7 @@ draw_spetrum_info :: proc(data: ^audio.Data, width: f32, height: f32) {
 	bins := len(data.spectrum)
 	spacing := (f32(audio.SAMPLE_RATE)) / f32(bins)
 
-	for i in 0 ..< bins - 1 {
+	for i in 0 ..< (bins / 2) - 1 {
 		// Calculate frequency of this bin and next bin
 		freq1 := f32(i) * spacing
 		freq2 := f32(i + 1) * spacing

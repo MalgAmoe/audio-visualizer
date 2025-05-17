@@ -13,7 +13,7 @@ OUTPUT_NUM_CHANNELS :: 2
 BUFFER_SIZE :: 512
 ANALYSIS_BUFFERS :: 8 * OUTPUT_NUM_CHANNELS * BUFFER_SIZE
 
-window := hann_window(ANALYSIS_BUFFERS / 2)
+window := hann_window(ANALYSIS_BUFFERS / OUTPUT_NUM_CHANNELS)
 
 Phase :: struct {
 	phase:     f32,
@@ -44,9 +44,11 @@ Data :: struct {
 	spectral_spread:    f32,
 	spectral_flux:      f32,
 	stereo_correlation: f32,
-	spectral_phases:    [ANALYSIS_BUFFERS / 4]Phase,
+	spectral_phases:    [ANALYSIS_BUFFERS / (2 * OUTPUT_NUM_CHANNELS)]Phase,
+
+	// buffers
 	buffer:             [ANALYSIS_BUFFERS]f32,
-	mono_buffer:        [ANALYSIS_BUFFERS / 2]f32,
+	mono_buffer:        [ANALYSIS_BUFFERS / OUTPUT_NUM_CHANNELS]f32,
 }
 
 Ring :: struct {

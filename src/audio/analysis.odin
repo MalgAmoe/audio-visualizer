@@ -15,9 +15,7 @@ calculate_rms :: proc(buffer: []f32) -> f32 {
 
 fft :: proc(x: [ANALYSIS_BUFFERS / 2]f32) -> [ANALYSIS_BUFFERS / 2]complex64 {
 	N := len(x)
-	steps := int(math.log2(f16(N)))
-
-	assert(((N & (N - 1)) == 0), "In put size must be power of 2")
+	steps := log2_int(N)
 
 	// convert to complex
 	X: [ANALYSIS_BUFFERS / 2]complex64
@@ -69,8 +67,19 @@ bit_reverse :: proc(value: int, bits: int) -> int {
 	return result
 }
 
+log2_int :: proc(n: int) -> int {
+	assert(((n & (n - 1)) == 0), "Input size must be power of 2")
+	count := 0
+	value := n
+	for value > 1 {
+		value >>= 1
+		count += 1
+	}
+	return count
+}
+
 compute_spectrum :: proc(fft_out: [ANALYSIS_BUFFERS / 2]complex64) -> [ANALYSIS_BUFFERS / 2]f32 {
-	N := len(fft_out) / 2
+	N := len(fft_out)
 	spectrum: [ANALYSIS_BUFFERS / 2]f32
 
 	for i in 0 ..< N {
@@ -192,8 +201,8 @@ stereo_correlation :: proc(frame: []f32) -> f32 {
 spectral_phase :: proc(
 	left_fft: [ANALYSIS_BUFFERS / 2]complex64,
 	right_fft: [ANALYSIS_BUFFERS / 2]complex64,
-) -> [ANALYSIS_BUFFERS / 4]Phase {
-	phases: [ANALYSIS_BUFFERS / 4]Phase
+) -> [ANALYSIS_BUFFERS / (2 * OUTPUT_NUM_CHANNELS)]Phase {
+	phases: [ANALYSIS_BUFFERS / (2 * OUTPUT_NUM_CHANNELS)]Phase
 
 	for i in 0 ..< len(phases) {
 		left_im := imag(left_fft[i])
