@@ -18,7 +18,7 @@ draw :: proc(data: ^audio.Data, width: f32, height: f32) {
 }
 
 draw_waveform_info :: proc(data: ^audio.Data, width: f32, height: f32) {
-	rl.DrawText(fmt.ctprintf("rms: %f", data.rms), 10, 10, 20, rl.RAYWHITE)
+	rl.DrawText(fmt.ctprintf("rms: %f", data.rms), 10, 10, 20, rl.GOLD)
 
 	len_buffer := len(data.mono_buffer)
 
@@ -29,7 +29,7 @@ draw_waveform_info :: proc(data: ^audio.Data, width: f32, height: f32) {
 		x2 := ((i_f + 1) / f32(len_buffer)) * width * 0.5
 		y2 := ((1.0 - data.mono_buffer[i + 1]) * (height * 0.25)) + 20
 
-		rl.DrawLineEx({x1, y1}, {x2, y2}, 10 * data.rms, rl.RAYWHITE)
+		rl.DrawLineEx({x1, y1}, {x2, y2}, 10 * data.rms, rl.BEIGE)
 	}
 }
 
