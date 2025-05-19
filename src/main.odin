@@ -85,7 +85,7 @@ main :: proc() {
 
 	// setup raylib
 	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI, .MSAA_4X_HINT})
-	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "The Thing!")
+	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "Audio Thingy")
 	rl.SetTargetFPS(60)
 	defer rl.CloseWindow()
 

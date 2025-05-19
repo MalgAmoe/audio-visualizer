@@ -13,6 +13,8 @@ calculate_rms :: proc(buffer: []f32) -> f32 {
 	return math.sqrt_f32(sum / f32(N))
 }
 
+// for ifft change twiddle factor from (-2 * math.PI / m_32) to (2 * math.PI / m_32)
+// and scale bins by N
 fft :: proc(x: [ANALYSIS_BUFFERS / 2]f32) -> [ANALYSIS_BUFFERS / 2]complex64 {
 	N := len(x)
 	steps := log2_int(N)
@@ -67,6 +69,7 @@ bit_reverse :: proc(value: int, bits: int) -> int {
 	return result
 }
 
+// used to fix errors with log2 of floatss
 log2_int :: proc(n: int) -> int {
 	assert(((n & (n - 1)) == 0), "Input size must be power of 2")
 	count := 0

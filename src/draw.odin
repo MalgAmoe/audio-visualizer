@@ -15,6 +15,7 @@ draw :: proc(data: ^audio.Data, width: f32, height: f32) {
 	draw_waveform_info(data, width, height)
 	draw_spetrum_info(data, width, height)
 	draw_phase_info(data, width, height)
+	draw_phase_meter(data, width, height)
 }
 
 draw_waveform_info :: proc(data: ^audio.Data, width: f32, height: f32) {
@@ -126,4 +127,35 @@ draw_phase_info :: proc(data: ^audio.Data, width: f32, height: f32) {
 	)
 	rl.DrawText("-1", i32(width) / 2 + 30, i32(y_stereo_correlation_1 - 12), 15, rl.PINK)
 	rl.DrawText("1", i32(width) - 40, i32(y_stereo_correlation_1 - 12), 15, rl.PINK)
+}
+
+draw_phase_meter :: proc(data: ^audio.Data, width: f32, height: f32) {
+	len_buffer := len(data.buffer)
+	radius := (width > height ? height / 4 : width / 4) - 10
+	center := rl.Vector2{width / 4, 3 * height / 4}
+	angle: f32 = -45.0 * math.PI / 180.0
+
+	rl.DrawCircleLinesV(center, radius, rl.DARKGRAY)
+
+	rl.DrawLineV(
+		{center.x - radius, center.y - radius},
+		{center.x + radius, center.y + radius},
+		rl.DARKGRAY,
+	)
+	rl.DrawLineV(
+		{center.x - radius, center.y + radius},
+		{center.x + radius, center.y - radius},
+		rl.DARKGRAY,
+	)
+
+	rl.DrawLineV({center.x, center.y - radius}, {center.x, center.y + radius}, rl.DARKGRAY) // Vertical
+	rl.DrawLineV({center.x - radius, center.y}, {center.x + radius, center.y}, rl.DARKGRAY) // Horizontal
+
+	for i in 0 ..< len(data.buffer) / 2 - 1 {
+		vec := rl.Vector2{data.buffer[2 * i] * radius, data.buffer[2 * i + 1] * radius}
+
+		rotated_vec := rl.Vector2Rotate(vec, 90.0 * math.PI / 180.0)
+
+		rl.DrawPixelV(rotated_vec + center, rl.WHITE)
+	}
 }
