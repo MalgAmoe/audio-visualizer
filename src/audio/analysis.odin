@@ -3,6 +3,9 @@ package audio
 import "core:fmt"
 import "core:math"
 
+
+// ---------- SIGNAL STATS ----------
+
 calculate_rms :: proc(buffer: []f32) -> f32 {
 	N := len(buffer)
 	sum: f32 = 0
@@ -13,8 +16,51 @@ calculate_rms :: proc(buffer: []f32) -> f32 {
 	return math.sqrt_f32(sum / f32(N))
 }
 
-// for ifft change twiddle factor from (-2 * math.PI / m_32) to (2 * math.PI / m_32)
-// and scale bins by N
+stereo_correlation :: proc(frame: []f32) -> f32 {
+	if len(frame) < 2 || len(frame) % 2 != 0 {
+		return 0
+	}
+
+	sum_l: f32 = 0
+	sum_r: f32 = 0
+	sum_lr: f32 = 0
+	sum_l_square: f32 = 0
+	sum_r_square: f32 = 0
+
+	len_frame := len(frame) / 2
+
+	for i in 0 ..< len_frame {
+		left := frame[2 * i]
+		right := frame[2 * i + 1]
+
+		sum_l += left
+		sum_r += right
+		sum_lr += left * right
+		sum_l_square += left * left
+		sum_r_square += right * right
+	}
+
+	n := f32(len_frame)
+	covariance := (sum_lr - (sum_l * sum_r) / n) / n
+	variance_l := (sum_l_square - (sum_l * sum_l) / n) / n
+	variance_r := (sum_r_square - (sum_r * sum_r) / n) / n
+
+	std_dev_l := math.sqrt(variance_l)
+	std_dev_r := math.sqrt(variance_r)
+
+	epsilon: f32 = 1e-8
+	if std_dev_l < epsilon || std_dev_r < epsilon {
+		return 0
+	}
+
+	correlation := covariance / (std_dev_l * std_dev_r)
+
+	return math.clamp(correlation, -1, 1)
+}
+
+
+// ---------- FFT ----------
+
 fft :: proc($N: int, x: [N]f32) -> (X: [N]complex64) {
 	steps := log2_int(N)
 
@@ -57,6 +103,49 @@ fft :: proc($N: int, x: [N]f32) -> (X: [N]complex64) {
 	return X
 }
 
+ifft :: proc($N: int, X: [N]complex64) -> (x: [N]complex64) {
+	steps := log2_int(N)
+
+	for i in 0 ..< N {
+		x[i] = X[i]
+	}
+
+	// bit reverse input
+	for k in 0 ..< N {
+		rev_k := bit_reverse(k, steps)
+		if rev_k > k {
+			temp := x[k]
+			x[k] = x[rev_k]
+			x[rev_k] = temp
+		}
+	}
+
+	// compute ifft
+	for s in 1 ..= steps {
+		m := 1 << uint(s)
+		m_32 := f32(m)
+		wm: complex64 = complex(math.cos_f32(2 * math.PI / m_32), math.sin_f32(2 * math.PI / m_32))
+
+		for k := 0; k < N; k += m {
+			w: complex64 = complex(1, 0)
+			for j := 0; j < m / 2; j += 1 {
+				t := w * x[k + j + m / 2]
+				u := x[k + j]
+				x[k + j] = u + t
+				x[k + j + m / 2] = u - t
+				w *= wm
+			}
+		}
+	}
+
+	scale := 1.0 / f32(N)
+	for i in 0 ..< N {
+		x[i] = x[i] * complex(scale, 0)
+	}
+
+	return x
+}
+
 bit_reverse :: proc(value: int, bits: int) -> int {
 	result := 0
 	current_value := value
@@ -67,7 +156,6 @@ bit_reverse :: proc(value: int, bits: int) -> int {
 	return result
 }
 
-// used to fix errors with log2 of floatss
 log2_int :: proc(n: int) -> int {
 	assert(((n & (n - 1)) == 0), "Input size must be power of 2")
 	count := 0
@@ -78,6 +166,9 @@ log2_int :: proc(n: int) -> int {
 	}
 	return count
 }
+
+
+// ---------- SPECTRUM ----------
 
 compute_spectrum :: proc($N: int, fft_out: [N]complex64) -> (spectrum: [N]f32) {
 	for i in 0 ..< N {
@@ -144,48 +235,6 @@ spectral_flux :: proc($N: int, spectrum: [N]f32, old_spectrum: [N]f32) -> f32 {
 	return math.sqrt(sum_square_differences)
 }
 
-stereo_correlation :: proc(frame: []f32) -> f32 {
-	if len(frame) < 2 || len(frame) % 2 != 0 {
-		return 0
-	}
-
-	sum_l: f32 = 0
-	sum_r: f32 = 0
-	sum_lr: f32 = 0
-	sum_l_square: f32 = 0
-	sum_r_square: f32 = 0
-
-	len_frame := len(frame) / 2
-
-	for i in 0 ..< len_frame {
-		left := frame[2 * i]
-		right := frame[2 * i + 1]
-
-		sum_l += left
-		sum_r += right
-		sum_lr += left * right
-		sum_l_square += left * left
-		sum_r_square += right * right
-	}
-
-	n := f32(len_frame)
-	covariance := (sum_lr - (sum_l * sum_r) / n) / n
-	variance_l := (sum_l_square - (sum_l * sum_l) / n) / n
-	variance_r := (sum_r_square - (sum_r * sum_r) / n) / n
-
-	std_dev_l := math.sqrt(variance_l)
-	std_dev_r := math.sqrt(variance_r)
-
-	epsilon: f32 = 1e-8
-	if std_dev_l < epsilon || std_dev_r < epsilon {
-		return 0
-	}
-
-	correlation := covariance / (std_dev_l * std_dev_r)
-
-	return math.clamp(correlation, -1, 1)
-}
-
 spectral_phase :: proc(
 	$N: int,
 	left_fft: [N]complex64,
@@ -216,6 +265,9 @@ spectral_phase :: proc(
 	return phases
 }
 
+
+// ---------- WINDOWING ----------
+
 hann_window :: proc($N: int) -> [N]f32 {
 	window: [N]f32
 	for i in 0 ..< N {
@@ -223,6 +275,9 @@ hann_window :: proc($N: int) -> [N]f32 {
 	}
 	return window
 }
+
+
+// ---------- HELPERS ----------
 
 stereo_buffer_to_mono :: proc(buffer: []f32, mono_buffer: []f32) {
 	for &sample, i in mono_buffer {
