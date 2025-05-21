@@ -12,8 +12,9 @@ SAMPLE_RATE: c.uint = 44100
 OUTPUT_NUM_CHANNELS :: 2
 BUFFER_SIZE :: 512
 ANALYSIS_BUFFERS :: 8 * OUTPUT_NUM_CHANNELS * BUFFER_SIZE
+ANALYSIS_BUFFERS_HALF :: ANALYSIS_BUFFERS / OUTPUT_NUM_CHANNELS
 
-window := hann_window(ANALYSIS_BUFFERS / OUTPUT_NUM_CHANNELS)
+window := hann_window(ANALYSIS_BUFFERS_HALF)
 
 Phase :: struct {
 	phase:     f32,
@@ -144,21 +145,30 @@ analyse_audio :: proc(app: ^Data) {
 			app.stereo_correlation = stereo_correlation(app.buffer[:])
 
 			windowed_buffer := app.mono_buffer * window
-			fft_value := fft(windowed_buffer)
-			spectrum := compute_spectrum(fft_value)
+			fft_value := fft(ANALYSIS_BUFFERS_HALF, windowed_buffer)
+			spectrum := compute_spectrum(ANALYSIS_BUFFERS_HALF, fft_value)
 			app.old_spectrum = app.spectrum
 			app.spectrum = spectrum
 
-			app.spectral_centroid = spectral_centroid(spectrum)
-			app.spectral_spread = spectral_spread(spectrum, app.spectral_centroid)
-			app.spectral_flux = spectral_flux(spectrum, app.old_spectrum)
+			app.spectral_centroid = spectral_centroid(
+				ANALYSIS_BUFFERS_HALF,
+				int(SAMPLE_RATE),
+				spectrum,
+			)
+			app.spectral_spread = spectral_spread(
+				ANALYSIS_BUFFERS_HALF,
+				int(SAMPLE_RATE),
+				spectrum,
+				app.spectral_centroid,
+			)
+			app.spectral_flux = spectral_flux(ANALYSIS_BUFFERS_HALF, spectrum, app.old_spectrum)
 
-			left_buffer, right_buffer := get_buffer_left_and_right(app.buffer)
+			left_buffer, right_buffer := get_buffer_left_and_right(ANALYSIS_BUFFERS, app.buffer)
 			left_windowed_buffer := left_buffer * window
 			right_windowed_buffer := right_buffer * window
-			left_fft := fft(left_windowed_buffer)
-			right_fft := fft(right_windowed_buffer)
-			app.spectral_phases = spectral_phase(left_fft, right_fft)
+			left_fft := fft(ANALYSIS_BUFFERS_HALF, left_windowed_buffer)
+			right_fft := fft(ANALYSIS_BUFFERS_HALF, right_windowed_buffer)
+			app.spectral_phases = spectral_phase(ANALYSIS_BUFFERS_HALF, left_fft, right_fft)
 		}
 
 		time.accurate_sleep(10 * time.Millisecond)

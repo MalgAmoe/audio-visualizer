@@ -15,12 +15,10 @@ calculate_rms :: proc(buffer: []f32) -> f32 {
 
 // for ifft change twiddle factor from (-2 * math.PI / m_32) to (2 * math.PI / m_32)
 // and scale bins by N
-fft :: proc(x: [ANALYSIS_BUFFERS / 2]f32) -> [ANALYSIS_BUFFERS / 2]complex64 {
-	N := len(x)
+fft :: proc($N: int, x: [N]f32) -> (X: [N]complex64) {
 	steps := log2_int(N)
 
 	// convert to complex
-	X: [ANALYSIS_BUFFERS / 2]complex64
 	for i in 0 ..< N {
 		X[i] = complex(x[i], 0)
 	}
@@ -81,10 +79,7 @@ log2_int :: proc(n: int) -> int {
 	return count
 }
 
-compute_spectrum :: proc(fft_out: [ANALYSIS_BUFFERS / 2]complex64) -> [ANALYSIS_BUFFERS / 2]f32 {
-	N := len(fft_out)
-	spectrum: [ANALYSIS_BUFFERS / 2]f32
-
+compute_spectrum :: proc($N: int, fft_out: [N]complex64) -> (spectrum: [N]f32) {
 	for i in 0 ..< N {
 		re := real(fft_out[i])
 		im := imag(fft_out[i])
@@ -95,11 +90,10 @@ compute_spectrum :: proc(fft_out: [ANALYSIS_BUFFERS / 2]complex64) -> [ANALYSIS_
 	return spectrum
 }
 
-spectral_centroid :: proc(magnitude_bins: [ANALYSIS_BUFFERS / 2]f32) -> f32 {
+spectral_centroid :: proc($N: int, sample_rate: int, magnitude_bins: [N]f32) -> f32 {
 	f_times_mag: f32 = 0
 	total_mag: f32 = 0
-
-	bin_width := f32(SAMPLE_RATE) / f32(len(magnitude_bins))
+	bin_width := f32(sample_rate / N)
 
 	for i in 0 ..< int(len(magnitude_bins) / 2) {
 		f_n := (f32(i) + 0.5) * bin_width
@@ -117,11 +111,10 @@ spectral_centroid :: proc(magnitude_bins: [ANALYSIS_BUFFERS / 2]f32) -> f32 {
 	return f_times_mag / total_mag
 }
 
-spectral_spread :: proc(magnitude_bins: [ANALYSIS_BUFFERS / 2]f32, centroid: f32) -> f32 {
+spectral_spread :: proc($N: int, sample_rate: int, magnitude_bins: [N]f32, centroid: f32) -> f32 {
 	sum_squared_deviation: f32 = 0
 	sum_amplitude: f32 = 0
-
-	bin_width := f32(SAMPLE_RATE) / f32(len(magnitude_bins))
+	bin_width := f32(sample_rate / N)
 
 	for i in 0 ..< int(len(magnitude_bins) / 2) {
 		f_n := (f32(i) + 0.5) * bin_width
@@ -140,17 +133,9 @@ spectral_spread :: proc(magnitude_bins: [ANALYSIS_BUFFERS / 2]f32, centroid: f32
 	return math.sqrt(sum_squared_deviation / sum_amplitude)
 }
 
-spectral_flux :: proc(
-	spectrum: [ANALYSIS_BUFFERS / 2]f32,
-	old_spectrum: [ANALYSIS_BUFFERS / 2]f32,
-) -> f32 {
+spectral_flux :: proc($N: int, spectrum: [N]f32, old_spectrum: [N]f32) -> f32 {
 	sum_square_differences: f32 = 0
-
-	if (len(old_spectrum) < len(spectrum)) {
-		return 0
-	}
-
-	for i in 0 ..< len(spectrum) {
+	for i in 0 ..< N {
 		difference := spectrum[i] - old_spectrum[i]
 		rectified_difference := math.max(0, difference)
 		sum_square_differences += rectified_difference * rectified_difference
@@ -202,11 +187,12 @@ stereo_correlation :: proc(frame: []f32) -> f32 {
 }
 
 spectral_phase :: proc(
-	left_fft: [ANALYSIS_BUFFERS / 2]complex64,
-	right_fft: [ANALYSIS_BUFFERS / 2]complex64,
-) -> [ANALYSIS_BUFFERS / (2 * OUTPUT_NUM_CHANNELS)]Phase {
-	phases: [ANALYSIS_BUFFERS / (2 * OUTPUT_NUM_CHANNELS)]Phase
-
+	$N: int,
+	left_fft: [N]complex64,
+	right_fft: [N]complex64,
+) -> (
+	phases: [N / 2]Phase,
+) {
 	for i in 0 ..< len(phases) {
 		left_im := imag(left_fft[i])
 		left_re := real(left_fft[i])
@@ -245,15 +231,14 @@ stereo_buffer_to_mono :: proc(buffer: []f32, mono_buffer: []f32) {
 }
 
 get_buffer_left_and_right :: proc(
-	buffer: [ANALYSIS_BUFFERS]f32,
+	$N: int,
+	buffer: [N]f32,
 ) -> (
-	l_buffer: [ANALYSIS_BUFFERS / 2]f32,
-	r_buffer: [ANALYSIS_BUFFERS / 2]f32,
-) {
-	if len(buffer) < 2 || len(buffer) % 2 != 0 {
-		return l_buffer, r_buffer
-	}
-	n := len(buffer) / 2
+	l_buffer: [N / 2]f32,
+	r_buffer: [N / 2]f32,
+) where (N & (N - 1)) ==
+	0 {
+	n := N / 2
 
 	for i in 0 ..< n {
 		l_buffer[i] = buffer[2 * i]
